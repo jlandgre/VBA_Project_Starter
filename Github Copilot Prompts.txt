@@ -1,0 +1,292 @@
+Project Background
+We are working on a VBA project that involves creating a class called StatsTest to execute multistep procedures. The project includes a custom VBA unit test suite in a separate workbook to test the StatsTest class. The test suite uses a Procedures class to manage and report test results.
+
+Key Concepts
+Tables Class: Manages table data within the project.
+ErrorHandling Class: Handles errors in the StatsTest class.
+Test Class: Used in the test suite to run tests and report results.
+Procedures Class: Used in the test suite to group tests by procedures that consist of multiple project functions and associated tests
+
+Example Code
+
+Tables Class
+```
+Option Explicit
+Public Raw As Object
+Public Summary As Object
+'-----------------------------------------------------------------------------------------
+' Initialize project tables
+' JDL 9/30/24
+Function Init(tbls) As Boolean
+    SetErrs Init: If errs.IsHandle Then On Error GoTo ErrorExit
+    With tbls
+        Set .Raw = New tblRowsCols
+        Set .Summary = New tblRowsCols
+    End With
+    Exit Function
+    
+ErrorExit:
+    errs.RecordErr "Init", Init
+End Function
+```
+
+Unit Testing Driver (in test suite workbook)
+```
+'---------------------------------------------------------------------------------------
+' This tests project XYZClass
+' JDL 9/30/24
+Sub aa_DriverXYZTesting()
+    Dim procs As New Procedures, AllEnabled As Boolean
+    With procs
+        .Init procs, ThisWorkbook, "shtT", "XYZClass_test_suite"
+        SetApplEnvir False, False, xlCalculationAutomatic
+        AllEnabled = True
+        .xyz_proc1.Enabled = False
+        .xyz_proc2.Enabled = False
+    End With
+    
+    ' Tests of procedure 1
+    With procs.xyz_proc1
+        If .Enabled Or AllEnabled Then
+            procs.curProcedure = .Name
+            test_Function1 procs
+        End If
+    End With
+    
+    ' Tests of procedure 2
+    With procs.xyz_proc2
+        If .Enabled Or AllEnabled Then
+            procs.curProcedure = .Name
+        End If
+    End With
+    
+    procs.EvalOverall procs
+End Sub
+```
+Procedures Class (in test suite workbook)
+
+```
+Option Explicit
+'Version 9/30/24
+'This class defines project-specific groups of tests to run in the test suite driver sub
+
+' Individual procedure objects (project-specific)
+Public xyz_proc1 As Object
+Public xyz_proc2 As Object
+
+' General attributes for all procedures in the code project
+Public wkbk_testing As Workbook
+Public wksht_results As Worksheet
+Public test_suite_name As String
+Public curProcedure As String 'Name of current procedure
+
+'Column ranges on wksht_results
+Public colrngProcedure As Range
+Public colrngTestName As Range
+Public colrngTestResult As Range
+Public rngHeader As Range
+'---------------------------------------------------------------------------------------
+' Instance Procedure objects for each TestGroup
+' JDL 9/11/24
+Sub Init(procs, ByVal wkbk, ByVal shtT, test_suite_name)
+    With procs
+    
+        'instance project-specific Procedure class instances
+        Set .xyz_proc1 = New Procedure
+        .xyz_proc1.Name = "First Procedure"
+        Set .xyz_proc1 = New Procedure
+        .xyz_proc2.Name = "Second Procedure"
+         
+        'Set attributes and initialize test results sheet
+        .test_suite_name = test_suite_name
+        Set .wkbk_testing = wkbk
+        
+        'Initialize the Test Result sheet including creating it if it's not present
+        .InitTestsSheet procs, shtT
+
+        Set .colrngProcedure = .wksht_results.Columns(1)
+        Set .colrngTestName = .wksht_results.Columns(2)
+        Set .colrngTestResult = .wksht_results.Columns(3)
+        Set .rngHeader = Intersect(.wksht_results.Rows(1), _
+            Range(.wksht_results.Columns(1), .wksht_results.Columns(3)))
+                
+        'Clear the results columns and refresh header strings
+        .colrngTestResult.Clear
+        .rngHeader = Split("Procedure,Test Name,Test Result", ",")
+        
+        'Clear previous yellow highlighting of failed results if any
+        .colrngTestResult.Interior.Pattern = xlNone
+        
+        ColWidthAutofit Range(.colrngProcedure, .colrngTestResult)
+    End With
+End Sub
+```
+
+Request
+Please create a customized versions of
+* unit testing driver subroutine for our StatsTest project. Replace xyz_proc1 and xyz_proc2 with a single procedure called StatsProcedure.
+* customize the Procedures Class and its Init method to support the new StatsProcedure.
+
+---------------------
+
+
+We are ready to write the code and tests for the procedure(s).
+
+Project Architecture
+* We use the tbls instance of Tables class to manage tables in the project. the attributes of tbls are instances of the tblRowsCols class.
+* The top level driver subroutine will declare tbls as an Object, and the InitAllTables method will initialize tbls by setting it as a Tables instance and calling tbls.Init(tbls) to instance the attributes. This means that all tests need to also declare tbls as an Object and call the project's InitAllTables method as in this example:
+```
+'-----------------------------------------------------------------------------------------
+' Open the test file raw_data.xlsx and set worksheet attributes
+' JDL 9/30/24
+'
+Sub test_InitAllTables(procs)
+    Dim tst As New Test
+    tst.Init tst, "test_InitAllTables"
+    
+    'Test-specific code
+    Dim tbls As Object
+    
+    'Call interface.InitAllTables
+    tst.Assert tst, VBAProject_StatsTest.InitAllTables(tbls)
+    tst.Assert tst, tbls.raw.IsCustomTbl = False
+    tst.Assert tst, tbls.raw.sht = "raw_data"
+    
+    ' Update and report test results
+    tst.Update tst, procs
+End Sub
+```
+* tbls attributes (tblRowsCols instances) are initialized in the project's InitAllTables function per the example below.  
+  - Tables are either default or custom. Default tables like .Raw below have their header in row 1 of their sheet, and their data starts in row 2. They are initialized by calling tbls.xyz.Init(tbls.xyz, wkbk, sht:=sht)
+  - Custom tables are initialized by calling tbls.xyz.Init(tbls.xyz, wkbk, Defn:=defn_string) where defn_string can be later parsed by the tblRowsCols .Provision method to set sheet, home cell location, dimensions and other parameters
+
+```
+'-----------------------------------------------------------------------------------------
+' Initialize all project tables
+' JDL 10/1/24
+Public Function InitAllTables(tbls) As Boolean
+    SetErrs InitAllTables: If errs.IsHandle Then On Error GoTo ErrorExit
+    Dim tbl As Variant, wkbk As Workbook, sht As String
+    Set tbls = New Tables: If Not tbls.Init(tbls) Then GoTo ErrorExit
+         
+    'Raw data - wkbk is set on import
+    If Not tbls.Raw.Init(tbls.Raw, wkbk:=Nothing, sht:="raw_data") Then GoTo ErrorExit
+
+    'Other tables
+    << Add more table initializations here >>
+    Exit Function
+    
+ErrorExit:
+    errs.RecordErr "InitAllTables", InitAllTables
+End Function
+```
+
+* Because VBA does not allow instancing a project workbook class in the tests workbook, the project will include a New_xyz method to instance a class and make the object available to the test subroutine. This can be called in tests as needed:
+
+Code in test subroutine
+```
+Dim xyz As Object: Set xyz = VBAProject_StatsTest.New_xyz
+```
+Code in VBAProject_StatsTest project's Validation module
+```
+Public Function New_xyz() As xyz
+    Set New_xyz = New xyz
+End Function
+```
+
+Project Function Requirements
+* All functions should contain a 3-line docstring formatted as follows:
+  - The first line: a comment line with hyphens.
+  - The second line: a short description of what the function does (do not repeat the function's name).
+  - The third line: the author's initials and the current date (e.g., "JDL 9/30/24").
+  - The comment line with hyphens should precede the description and date lines.
+* Error Handling:
+  - Use the errs instance of a custom ErrorHandling class.
+  - errs is declared as a global variable.
+  - Use Boolean functions wherever possible. Return True if the function completes successfully and False if an error occurs.
+  - Use SetErrs at the beginning of each function to initialize errs if not already done.
+  - For Boolean functions, SetErrs initializes the function to True unless an optional IsDriver argument indicates otherwise.
+  - Use errs.RecordErr in the ErrorExit label to record and report errors. errs.RecordErr also sets the function to False.
+  - Use errs.IsFail to check for errors. If the condition evaluates to True, it sets error parameters for reporting.
+* Table Management:
+  - Use the tbls class whose attributes are instances of the tblRowsCols class to manage tables.
+  - Refer to table attributes as tbls.RawData.sht or tbls.RawData.wksht for the sheet name or Worksheet Object.
+  - Use tblRowsCols.Provision to set table dimensions either by sensing the .CurrentRegion or by a hard-coded .Defn string
+* Dim statements should include multiple variables on a single line separated by commas up to maximum line length.
+* Use with blocks to make code more readable
+
+Example Project Boolean Function
+```
+'-----------------------------------------------------------------------------------------
+' Function1 method
+' JDL 9/30/24
+'Public Function Function1(tbls) As Boolean
+    SetErrs Function1: If errs.IsHandle Then On Error GoTo ErrorExit
+
+    <<< Function Code >>>
+
+    ' Initialize a table object
+    If Not tbls.RawData.Init(tbls.wkbk, tbls.wksht, "RawData") Then GoTo ErrorExit
+
+    ' Error check
+    If errs.IsFail(errs, 1) Then GoTo ErrorExit
+
+    Exit Function
+    
+ErrorExit:
+    errs.RecordErr "Function1", Function1
+End Function
+```
+
+Example Test Code in Separate Test Suite Workbook
+* Functions are called by the test suite's aa_driver_xyzTesting sub as part of a procedure "with" block.
+* Use the test.Assert method to run Boolean checks on project function results. 
+* If the check fails, Assert sets tst.valTest to False 
+* tst.Update records the test result in the test suite's wksht_results sheet
+* Assert is also the preferred way of calling a Boolean project method and checking for correct execution
+```
+'-----------------------------------------------------------------------------------------
+' Function1 method (called by test suite driver sub)
+' JDL 9/30/24
+'
+Sub test_Function1(procs)
+    Dim tst As New Test
+    tst.Init tst, "test_Function1"
+    
+    ' Test-specific code
+    ' Example: instance a project workbook owned class by running its .New_xyz sub
+    '------------------
+    'Dim xyz_obj As Object
+    'Set xyz_obj = XYZ_Reference.New_xyz
+    'With xyz_obj
+        
+        ' Perform actions to be tested (use .Assert to run Boolean functions that have error handling)
+        'tst.Assert tst, .Init(tbl, wkbk:=tst.wkbkTest, sht:=shtTbl)
+        '
+        ' Check results
+        'tst.Assert tst, .xyzMethod1(xyz_obj)
+        'tst.Assert tst, .xyzMethod2(xyz_obj)
+        
+        ' Check results of method (example where methods create named range in test workbook)
+        'tst.Assert tst, tst.wkbkTest.Names("Col_A").RefersTo = "=Demo_Results!$A:$A"
+    'End With
+
+    ' Update and report test results
+    tst.Update tst, procs
+End Sub
+```
+Do you understand this background?
+
+---------------------
+Example prompt for method writing
+For our project's StatsTest class write the .OpenTestFile method that has the stats instance of StatsTest and pre-initialized tbls as arguments. It sets tbls.Raw.wkbk by opening an Excel file called raw_data.xlsx located in the same directory as the file containing StatsTest class. It sets tbls.Raw.sht to the workbook's "raw_data" sheet and sets .wksht to that sheet
+
+great, but you can directly set .wkbk, .wksht and .sht instead of using local variables. Also, per the background SetErrs and errs.RecordErr take care of setting the function to True or False, so delete "OpenTestFile=True" and "False" lines
+
+
+Example prompt for test writing
+Write test_OpenTestFile based on the background instructions.
+* it needs to declare tbls as Object and call VBAProject_StatsTest.InitAllTables(tbls).
+* it should instance stats as project StatsTest class by calling .New_StatsTest method
+* It should check that tbls.Raw.wkbk, .wksht and .sht were set correctly by calling stats.OpenTestFile
+GitHub Copilot
