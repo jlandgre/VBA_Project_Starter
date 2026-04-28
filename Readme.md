@@ -2,20 +2,21 @@
 
 This repository is a demo and project starter. It is designed to interoperate with use of Github Copilot for coding. The VBA toolbox aka "modeling operating system" contains the following:
 
-* The project workbook, **DemoStudy.xlsm**, demonstrates a user interface and starter code with structured data objects useful for a wide range of spreadsheet modeling projects. These objects are rows/columns tables and "scenario models" aka a columns-by-rows format --demonstrated here for handling single-valued inputs. These standard objects can provide both user-facing (Excel range names) and programmatic, object attribute wayfinding to access and work with their data. The "model" in this example is just a mockup, but it is represented by the **DemoStudy** class in the project workbook's VBA project.
+* The project workbook, **DemoStudy.xlsm**, demonstrates a user interface and starter code with structured data objects useful for a wide range of spreadsheet modeling projects. These objects are rows/columns tables and "scenario models" aka a columns-by-rows format --demonstrated here for handling single-valued inputs. These standard objects can provide both user-facing (Excel range names) and programmatic, object attribute wayfinding to access and work with their data. The "model" in this example is just a mockup, but it is represented by the **DemoStudy** class in the project workbook's VBA project. The project references and uses the [https://github.com/jlandgre/ExcelSteps](**ExcelSteps**) add-in.
 <p align="center">
   <u>Project Workbook Home Sheet</u></br><small>Scenario Model B3:F6</br>Custom Input Table H5:J9</small></br>
   <img src=images/project1.png alt="Overall Inputs" width=600></br>
 </p>
 
-* A test suite workbook, **tests_DemoStudy.xlsm**, with tests grouped by "Procedures" to make it convenient to run all or subsets of unit tests. This workbook contains a custom **Test** class to handle pass/fail assertions testing project workbook results. It reports test results on the **DemoStudyTests** sheet in the test workbook.
+* A test suite workbook, **tests_DemoStudy.xlsm**, has tests grouped by "Procedures" to make it convenient to run all or subsets of unit tests. This workbook contains a custom **Test** class to handle pass/fail assertions testing project workbook results. It reports test results on the **DemoStudy** sheet in the test workbook.
+* The test suite also contains a Setup test driver with "tests" that perform production setup and checks of readiness to go to production.
 * The test workbook's VBA project contains a reference to the project workbook's VBA project --allowing tests to execute project workbook code and check the results.
 <p align="center">
   <u>Test Suite Results</u></br><small>Best practice unit test naming: "test_&lt;class method name>"</small></br>
   <img src=images/tests1.png alt="Overall Inputs" width=400></br>
 </p>
 
-* The project workbook contains **Tables** and **Models** class instances, **tbls** and **mdls**, to manage and provide wayfinding for the data objects within a project. Our complex consulting projects have involved 8+ such objects to handle multiple use cases of a simulator or other application. The individual objects have hard-coded names (aka "Inputs" and "RowsCols" here) making programmatic references simple and transparent. An example is **tbls.Inputs.rngRows** for referring to the range of data rows in the **Inputs** table that is on the **Home** sheet.
+* The project workbook contains **Tables** and **Models** class instances, **tbls** and **mdls**, to manage and provide wayfinding for the data objects within a project. The individual objects have hard-coded names (aka "Inputs" and "RowsCols" here) making programmatic references simple and transparent. An example is **tbls.Inputs.rngRows** for referring to the range of data rows in the **Inputs** table that is on the **Home** sheet.
 <div style="font-size: 9px;">
 
 ```vba
