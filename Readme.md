@@ -21,30 +21,54 @@ This repository is a demo and project starter. It is designed to interoperate wi
 
 ```vba
 '-----------------------------------------------------------------------------------------
-' Initialize all project tables
-' JDL 12/2/24 (based on client project 9/24)
-Public Function InitAllTables(tbls) As Boolean
-    SetErrs InitAllTables: If errs.IsHandle Then On Error GoTo ErrorExit
-    Dim wkbk As Workbook, defn As String
-    Set wkbk = ThisWorkbook
-
-    Set tbls = New Tables: If Not tbls.Init(tbls) Then GoTo ErrorExit
+' Initialize all or some project tables
+' JDL 4/28/26
+Public Function InitTbls(tbls, Optional IsAll As Boolean = True, _
+    Optional ByVal IsInputs As Boolean = False, _
+    Optional ByVal IsRowsCols As Boolean = False, _
+    Optional IsRefresh = False) As Boolean
+    
+    SetErrs InitTbls, ThisWorkbook: If errs.IsHandle Then On Error GoTo ErrorExit
+    Dim wkbk As Workbook: Set wkbk = ThisWorkbook
+    Dim defn As String, sht As String
+    
+    ' Initialize tbls if not already instanced (allows multiple calls)
+    If tbls Is Nothing Then
+        Set tbls = New Tables: If Not tbls.Init(tbls) Then GoTo ErrorExit
+    End If
+    
+    If IsAll Then
+        IsInputs = True
+        IsRowsCols = True
+    End If
 
     With tbls
-
         'Non-default tbls "sht:rHome,cHome:....:nrows:ncols" see .SetCustomTblParams(tbl)
-        defn = "Home:6,8:T:T:T:F:F:T:0:-1:4:3"
-        If Not .Inputs.Provision(.Inputs, wkbk, False, TblName:="Inputs", defn:=defn) _
-            Then GoTo ErrorExit
-    
-        'Default tables (homed, single object on sheet)
-        If Not .RowsCols.Provision(.RowsCols, wkbk, False, sht:="RowsCols", _
-            IsSetColRngs:=True, IsSetColNames:=True) Then GoTo ErrorExit
+        If IsInputs Then
+            defn = "Home:6,8:T:T:T:F:F:T:0:-1:4:3"
+            If Not .Inputs.Provision(.Inputs, wkbk, False, TblName:="Inputs", defn:=defn) _
+                Then GoTo ErrorExit
+                
+            'No refresh for custom, non-homed table
+        End If
+            
+        'Default table (homed, single object on sheet)
+        If IsRowsCols Then
+            sht = "RowsCols"
+            If Not .RowsCols.Provision(.RowsCols, wkbk, False, sht:=sht, _
+                IsSetColRngs:=True, IsSetColNames:=True) Then GoTo ErrorExit
+              
+            'Optional refresh default, homed table
+            If IsRefresh Then
+                If Not RefreshTblAPI(wkbk, IsReplace:=True, IsTblFormat:=True, sht:=sht) _
+                    Then GoTo ErrorExit
+            End If
+        End If
     End With
     Exit Function
-
+    
 ErrorExit:
-    errs.RecordErr "InitAllTables", InitAllTables
+    errs.RecordErr "InitTbls", InitTbls
 End Function
 ```
 </div>
