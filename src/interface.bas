@@ -140,4 +140,29 @@ Sub ManageSheetVisibility(wkbk, Optional IsHide = True)
         wkbk.Sheets(sht).Visible = Not IsHide
     Next sht
 End Sub
+'-----------------------------------------------------------------------------------------
+' Demo looping over a comma-separated list and debug printing each item
+' JDL 4/29/26
+'
+Sub LoopDemo()
+    Dim val As Variant
 
+    ' Debug print each item in list
+    For Each val In Split("a,b,c", ",")
+        Debug.Print val
+    Next val
+End Sub
+'-----------------------------------------------------------------------------------------
+' Demo looping over dictionary keys and debug printing each key-value pair
+' JDL 4/29/26
+'
+Sub LoopDemo2()
+    Dim dict As Object, key As Variant
+    Set dict = ExcelSteps.New_Dictionary
+    If Not dict.ParseStringToDictProcedure("{""x"":1,""y"":2,""z"":3}") Then Exit Sub
+
+    ' Debug print each key and value in dict
+    For Each key In dict.GetKeys()
+        Debug.Print key, dict.Item(key)
+    Next key
+End Sub
